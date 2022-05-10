@@ -1,10 +1,12 @@
 import pygame, copy, random
 pygame.init()
 pygame.display.set_caption("Run Box run!")
-win = pygame.display.set_mode((800, 500))
+win = pygame.display.set_mode((800, 450))
+bg_img = pygame.image.load('background.jpg')
+clock = pygame.time.Clock()
 
 red = (255, 0, 0)
-green = (0, 255, 0)
+green = (108, 184, 132)# (126, 191, 147)
 
 class Player:
 	def __init__(self):
@@ -41,6 +43,7 @@ class Rectangle:
 		self.width = width
 		self.height = height
 		self.lower = False
+		self.same_height = False
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
@@ -65,7 +68,7 @@ class Platform():
 		self.y = 400
 		self.color = green
 		self.width = 800
-		self.height = 100
+		self.height = 50
 		self.obstacles_vel = 10
 		self.obstacles_list = [Rectangle(800, 360, 80, 40), Rectangle(800, 360, 120, 40), Rectangle(800, 320, 80, 80),
 							   Rectangle(800, 320, 80, 80), Rectangle(800, 280, 80, 40), Rectangle(800, 280, 120, 120), 
@@ -89,7 +92,7 @@ def create_next_obstacle():
 	elif obstacle.y == (platform.obstacles_onscreen[-1].y - 40):
 		platform.next_obstacle.lower = False
 	elif obstacle.y == platform.obstacles_onscreen[-1].y:
-		platform.next_obstacle.lower = False
+		platform.next_obstacle.same_height = True
 	else:
 		create_next_obstacle()
 
@@ -102,9 +105,10 @@ def reset():
 	platform.obstacles_vel = 10
 
 run = True
+i = 0
 
 while run:
-	pygame.time.delay(30)
+	pygame.time.delay(20)
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			run = False
@@ -117,6 +121,8 @@ while run:
 				reset()
 
 	win.fill((0, 0, 0))
+	win.blit(bg_img, (i, 0))
+	win.blit(bg_img, (800+i, 0))
 	box.display()
 	platform.display()
 
@@ -138,15 +144,23 @@ while run:
 			box.acc_down = False
 
 	if not platform.game_over:
+		if i == -800:
+			i = 0
+		i -= 10
 		if not platform.next_obstacle:
 			create_next_obstacle()
 
-		if platform.next_obstacle.lower:
-			if platform.obstacles_onscreen[-1].x + platform.obstacles_onscreen[-1].width <= 760:
-				platform.obstacles_onscreen.append(platform.next_obstacle)
-				platform.next_obstacle = None
-		elif not platform.next_obstacle.lower:
-			if platform.obstacles_onscreen[-1].x + platform.obstacles_onscreen[-1].width <= 700:
+		if not platform.next_obstacle.same_height:
+			if platform.next_obstacle.lower:
+				if platform.obstacles_onscreen[-1].x + platform.obstacles_onscreen[-1].width <= 760:
+					platform.obstacles_onscreen.append(platform.next_obstacle)
+					platform.next_obstacle = None
+			elif not platform.next_obstacle.lower:
+				if platform.obstacles_onscreen[-1].x + platform.obstacles_onscreen[-1].width <= 700:
+					platform.obstacles_onscreen.append(platform.next_obstacle)
+					platform.next_obstacle = None
+		else:
+			if platform.obstacles_onscreen[-1].x + platform.obstacles_onscreen[-1].width <= 660:
 				platform.obstacles_onscreen.append(platform.next_obstacle)
 				platform.next_obstacle = None
 
@@ -178,5 +192,6 @@ while run:
 			box.acc_down = True
 			platform.obstacle_under_box = None
 
-	pygame.display.update()
+	pygame.display.flip()
+	clock.tick(40)
 pygame.quit()
