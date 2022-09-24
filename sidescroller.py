@@ -1,3 +1,4 @@
+# Written in python 3.6.8
 import pygame, copy, random
 pygame.init()
 pygame.mixer.init()
@@ -29,13 +30,7 @@ class Player:
 
 	def reset(self):
 		""" Resets all the attributes of player to default after new game starts """
-		self.x = 200
-		self.y = 330
-		self.vel = 10
-		self.acc_up = False
-		self.acc_down = False
-		self.init_pos = 0
-		self.on_top_obstacle = False
+		self.__init__()
 
 
 class Rectangle:
@@ -46,7 +41,7 @@ class Rectangle:
 		self.color = green
 		self.width = width
 		self.height = height
-		self.is_floating = is_floating # If obstacle is floating above the above the platform
+		self.is_floating = is_floating # If obstacle is floating above the platform
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
@@ -96,6 +91,9 @@ class Platform():
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
+
+	def reset(self):
+		self.__init__()
 
 
 def createSpikes(no_of_spikes, last_obst):
@@ -151,14 +149,8 @@ def createObstaclesAndSpikes():
 # Resets all the important game values to default when called
 def reset():
 	pygame.mixer.music.play(-1, 0, 0)
-	platform.obstacles_onscreen = [Triangle(640, 370, 20), Triangle(660, 370, 20),
-								   Triangle(680, 370, 20), Rectangle(700, 330, 80, 40)]
-	platform.next_obstacle = None
-	platform.obstacle_under_box = None
-	platform.game_over = False
+	platform.reset()
 	box.reset()
-	platform.vel = 10
-	platform.score = 0
 
 def display_game_over_msg():
 	pygame.draw.rect(win, (255, 255, 255), (350, 10, 230, 150))
@@ -239,7 +231,7 @@ while run:
 		elif box.acc_down: # if player is accelerating downwards during jump
 			box.y += box.vel
 			if box.y == box.init_pos + 20:
-				box.vel = 10 # increase speed after some distance after certain distance
+				box.vel = 10 # increase speed after certain distance
 			if box.y == 330: # initial position of player on ground level
 				box.init_pos = box.y
 				box.acc_up = False
