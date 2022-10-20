@@ -51,7 +51,7 @@ class Triangle:
 	""" Spike Class: The spikes are triangular in shape """
 	def __init__(self, x, y, width):
 		self.x = x # X coordinate at the left base corner
-		self.y = y # Y coordinate at the left base corner
+		self.y = y # Y coordinate also at the left base corner
 		self.width = width
 		self.height = width
 		self.apex_x = x + (self.width//2) # X coordinate of the triangle's apex
@@ -113,19 +113,24 @@ def createSpikes(no_of_spikes, last_obst):
 def create_next_obstacle():
 	obstacle = random.choice(platform.obstacles_list)
 	platform.next_obstacle = copy.copy(obstacle)
+
+	# if the next obstacle is lower than the last obstacle on screen with 40px
 	if (obstacle.y - 40) == platform.obstacles_onscreen[-1].y:
 		if obstacle.is_floating:
-			# fills up the empty space under the floating obstacle with spikes
+			# fills up the empty space under the floating obstacle with a number of 
+			# spikes gotten from obstacle.width//20 since a spike has a base width of 20px.
 			createSpikes(2 + obstacle.width//20, platform.obstacles_onscreen[-1])
 		else:
 			createSpikes(2, platform.obstacles_onscreen[-1])
 
+	# if the next obstacle is higher than the last obstacle on screen with 40px
 	elif obstacle.y == (platform.obstacles_onscreen[-1].y - 40):
 		if obstacle.is_floating:
 			createSpikes(5 + obstacle.width//20, platform.obstacles_onscreen[-1])
 		else:
 			createSpikes(5, platform.obstacles_onscreen[-1])
 
+	# if the next obstacle and the last obstacle on screen are of same height above the platform
 	elif obstacle.y == platform.obstacles_onscreen[-1].y:
 		if obstacle.is_floating:
 			createSpikes(7 + obstacle.width//20, platform.obstacles_onscreen[-1])
@@ -138,7 +143,12 @@ def create_next_obstacle():
 def createObstaclesAndSpikes():
 	create_next_obstacle()
 	if platform.next_obstacle.is_floating:
+		# no of spikes that were just added to obstacles_onscreen, the negative value can be used as
+		# an index to get the first spike from the set of spikes that were just added to platform.obstacles_onscreen
 		index = platform.next_obstacle.width//20
+		
+		# Setting their x coordinates to the same value will make platform.next_obstacle float 
+		# over all spikes that were just added to obstacles_onscreen when they are rendered.
 		platform.next_obstacle.x = platform.obstacles_onscreen[-index].x
 	else:
 		# Positions next obstacle directly after the last obstacle on screen
