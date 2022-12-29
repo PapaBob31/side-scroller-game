@@ -1,4 +1,3 @@
-# Written in python 3.6.8
 import pygame, copy, random
 pygame.init()
 pygame.mixer.init()
@@ -143,8 +142,8 @@ def create_next_obstacle():
 def createObstaclesAndSpikes():
 	create_next_obstacle()
 	if platform.next_obstacle.is_floating:
-		# no of spikes that were just added to obstacles_onscreen, the negative value can be used as
-		# an index to get the first spike from the set of spikes that were just added to platform.obstacles_onscreen
+		# no of spikes that were just added to obstacles_onscreen, the negative value will be used as an index
+		# to get the first spike from the set of spikes that were just added to platform.obstacles_onscreen
 		index = platform.next_obstacle.width//20
 		
 		# Setting their x coordinates to the same value will make platform.next_obstacle float 
@@ -217,8 +216,8 @@ while run:
 						resume_game()
 
 	win.fill((0, 0, 0))
-	win.blit(bg_img, (i, 0)) # Moving first background image to give the illusion of moving player
-	win.blit(bg_img, (800+i, 0)) # Moving second background image to give the illusion of moving player 
+	win.blit(bg_img, (i, 0)) # Moving first background image to produce the illusion of moving player
+	win.blit(bg_img, (800+i, 0)) # Moving second background image to produce the illusion of moving player 
 	win.blit(text.render("SCORE: " + str(platform.score), True, green), (700, 10))
 	box.display()
 	platform.display()
