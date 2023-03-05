@@ -18,18 +18,30 @@ class Player:
 		self.color = red
 		self.width = 40
 		self.height = 40
-		self.vel = 10
-		self.acc_up = False # variable to control upward acceleration when jumping
-		self.acc_down = False # variable to control downward acceleration when jumping
-		self.init_pos = 0 # initial position before jumping up
-		self.on_top_obstacle = False
+		self.vel = 0
+		self.jump_count = -10
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
 
-	def reset(self):
-		""" Resets all the attributes of player to default after new game starts """
-		self.__init__()
+	def move(self):	
+		self.jump_count += 1
+		self.y += self.vel
+
+		if self.jump_count == -4:
+			self.vel = -5
+		if self.jump_count == 0:
+			print(self.y)
+			pause_game()
+			self.jump_count = 1
+			self.vel = 5
+			return
+			
+		if self.jump_count == 5:
+			self.vel = 10
+		if self.y == 330: # initial position of player on ground level
+			self.vel = 0
+			self.jump_count = -10
 
 
 class Rectangle:
@@ -64,7 +76,7 @@ class Triangle:
 
 class Platform():
 	"""
-		All the obstacles, spikes and the player will be positioned directly on top of the platform
+		Obstacles, spikes and the Player will all be positioned directly on top of the platform
 		or at a certain distance above the platform
 	"""
 	def __init__(self):
@@ -91,8 +103,45 @@ class Platform():
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
 
-	def reset(self):
-		self.__init__()
+	def move_obstacles(self):
+		for obst in self.obstacles_onscreen[:]:
+			if obst.x + obst.width <= 0:
+				if type(obst) == Rectangle:
+					platform.score += 1
+				platform.obstacles_onscreen.remove(obst)
+				continue
+
+			obst.display()
+			self.check_for_collisions(obst)
+			if type(obst) == Triangle:
+				obst.x -= platform.vel
+				obst.apex_x -= platform.vel
+				obst.right_base_corner -= platform.vel
+			else:
+				obst.x -= platform.vel
+
+
+	def check_for_collisions(self, obstacle):
+		""" Checks for collisions between an Obstacle and a Player """
+		if type(obstacle) == Rectangle:
+			if box.vel > 0:
+				if box.y + box.height == obstacle.y:
+					# if player lands on rectangular obstacle, It should stop and stay on the obstacle
+					if box.x + box.width >= obstacle.x and obstacle.x + obstacle.width >= box.x:
+						platform.obstacle_under_box = obstacle
+						return
+
+			# if player collides with rectangular obstacle
+			if box.y + box.height > obstacle.y and obstacle.y + obstacle.height > box.y:
+				if obstacle.x == box.x + box.width:
+					game_over()
+
+		else:	
+			if box.y + 40 >= obstacle.apex_y:
+				if box.vel == 0 and box.x + box.width == obstacle.x: # if player collides with spikes
+					game_over()
+				if box.x + box.width >= obstacle.apex_x and obstacle.apex_x > box.x: # if player lands on spikes
+					game_over()
 
 
 def createSpikes(no_of_spikes, last_obst):
@@ -158,21 +207,21 @@ def createObstaclesAndSpikes():
 # Resets all the important game values to default when called
 def reset():
 	pygame.mixer.music.play(-1, 0, 0)
-	platform.reset()
-	box.reset()
+	platform.__init__()
+	box.__init__()
 
-def display_game_over_msg():
-	pygame.draw.rect(win, (255, 255, 255), (350, 10, 230, 150))
-	pygame.draw.rect(win, green, (350, 10, 230, 30))
-	win.blit(text.render("GAME OVER!", False, red), (370, 20))
-	win.blit(text.render("Press SPACE to play again", True, green), (360, 50))
+def display_msg(text1, text2):
+	pygame.draw.rect(win, (255, 255, 255), (300, 50, 200, 100))
+	pygame.draw.rect(win, green, (300, 50, 200, 30))
+	win.blit(text.render(text1, False, red), (350, 55))
+	win.blit(text.render(text2, True, green), (310, 100))
 
 def game_over():
 	pygame.mixer.music.stop()
 	platform.game_over = True
 	box.vel = 0
 	platform.vel = 0
-	display_game_over_msg()
+	display_msg("GAME OVER!", "Press SPACE to play again")
 
 def pause_game():
 	platform.game_paused = True
@@ -183,12 +232,7 @@ def resume_game():
 	platform.game_paused = False
 	pygame.mixer.music.unpause()
 	platform.vel = 10
-
-def display_paused_game_msg():
-	pygame.draw.rect(win, (255, 255, 255), (300, 50, 200, 100))
-	pygame.draw.rect(win, green, (300, 50, 200, 30))
-	win.blit(text.render("GAME PAUSED!", False, red), (320, 50))
-	win.blit(text.render("Press SPACE to resume", True, green), (310, 100))
+	
 
 box = Player()
 platform = Platform()
@@ -202,10 +246,10 @@ while run:
 		if event.type == pygame.QUIT:
 			run = False
 		if event.type == pygame.KEYDOWN:
-			if event.key == pygame.K_UP and not box.acc_down and not box.acc_up:
+			if event.key == pygame.K_UP and (platform.obstacle_under_box or box.vel == 0):
 				if not platform.game_over and not platform.game_paused:
-					box.init_pos = box.y
-					box.acc_up = True # Make the player jump up 
+					box.vel = -10
+					box.jump_count = -10
 			if event.key == pygame.K_SPACE:
 				if platform.game_over:
 					reset()
@@ -222,78 +266,24 @@ while run:
 	box.display()
 	platform.display()
 	if platform.game_paused:
-		display_paused_game_msg()
+		display_msg("GAME PAUSED!", "Press SPACE to resume")
 
 	if not platform.game_over and not platform.game_paused:
 		if i == -800:
 			i = 0
 		i -= platform.vel
 
-		if box.acc_up: # if player is accelerating upwards during jump
-			box.y -= box.vel
-			if box.y == box.init_pos - 60:
-				box.vel = 5 # reduce speed as player approaches maximum jump height
-			if box.y == box.init_pos - 80: # Maximum jump height
-				box.init_pos = box.y
-				box.acc_down = True
-				box.acc_up = False
-		elif box.acc_down: # if player is accelerating downwards during jump
-			box.y += box.vel
-			if box.y == box.init_pos + 20:
-				box.vel = 10 # increase speed after certain distance
-			if box.y == 330: # initial position of player on ground level
-				box.init_pos = box.y
-				box.acc_up = False
-				box.acc_down = False
+		if not platform.obstacle_under_box:
+			box.move()
 
 		if platform.obstacles_onscreen[-1].x < 800:
 			createObstaclesAndSpikes()
-	
-	# Moving obstacles on screen
-	for obst in platform.obstacles_onscreen[:]:
-		obst.display()
-		if type(obst) == Triangle:
-			obst.x -= platform.vel
-			obst.apex_x -= platform.vel
-			obst.right_base_corner -= platform.vel
-		else:
-			obst.x -= platform.vel
+	platform.move_obstacles()
 
-	# If an obstacle has left the viewport, It should be removed from the list
-	for obst in platform.obstacles_onscreen[:]:
-		if obst.x + obst.width <= 0:
-			if type(obst) == Rectangle:
-				platform.score += 1
-			platform.obstacles_onscreen.remove(obst)
-
-	for obst in platform.obstacles_onscreen[:]:
-		if type(obst) == Rectangle:
-			if box.acc_down:
-				if box.y + 40 == obst.y:
-					# if player lands on rectangular obstacle, It should stop and stay on the obstacle
-					if box.x in range(obst.x, obst.x + obst.width+1) or obst.x in range(box.x, box.x + box.width+1):
-						box.acc_down = False
-						platform.obstacle_under_box = obst
-
-			# if player collides with rectangular obstacle
-			if box.y in range(obst.y, obst.y + obst.height+1) or obst.y in range(box.y, box.y + box.height+1):
-				if obst.x == box.x + box.width:
-					game_over()
-		else:
-			# if player collides with spikes
-			if obst.apex_y in range(box.y, box.y + box.height):
-				if obst.x == box.x + box.width and not box.acc_up:
-					game_over()
-
-			# if player lands on spikes
-			if obst.apex_x in range(box.x, box.x + box.width+1):
-				if box.y + 40 >= obst.apex_y:
-					game_over()
 
 	if platform.obstacle_under_box:
 		# if the player is no longer on an obstacle
 		if platform.obstacle_under_box.x + platform.obstacle_under_box.width < box.x:
-			box.acc_down = True # Player should fall down
 			platform.obstacle_under_box = None
 
 	pygame.display.flip()
