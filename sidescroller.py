@@ -31,12 +31,10 @@ class Player:
 		if self.jump_count == -4:
 			self.vel = -5
 		if self.jump_count == 0:
-			print(self.y)
-			pause_game()
 			self.jump_count = 1
 			self.vel = 5
 			return
-			
+
 		if self.jump_count == 5:
 			self.vel = 10
 		if self.y == 330: # initial position of player on ground level
