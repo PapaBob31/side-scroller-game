@@ -25,6 +25,8 @@ class Player:
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
 
 	def move(self):
+		if platform.obstacle_under_box and box.vel > 0:
+			return
 		self.jump_count += 1
 		self.y += self.vel
 
@@ -103,14 +105,7 @@ class Platform():
 
 	def move_and_display_obstacles(self):
 		for obst in self.obstacles_onscreen[:]:
-			if obst.x + obst.width <= 0:
-				if type(obst) == Rectangle:
-					platform.score += 1
-				platform.obstacles_onscreen.remove(obst)
-				continue
-
-			obst.display()
-			self.check_for_collisions(obst)
+			obst.display()			
 			if type(obst) == Triangle:
 				obst.x -= platform.vel
 				obst.apex_x -= platform.vel
@@ -118,6 +113,12 @@ class Platform():
 			else:
 				obst.x -= platform.vel
 
+			self.check_for_collisions(obst)
+
+			if obst.x + obst.width <= 0:
+				if type(obst) == Rectangle:
+					platform.score += 1
+				platform.obstacles_onscreen.remove(obst)
 
 	def check_for_collisions(self, obstacle):
 		""" Checks for collisions between an Obstacle and a Player """
@@ -132,15 +133,14 @@ class Platform():
 			# if player collides with rectangular obstacle
 			if box.y + box.height > obstacle.y and obstacle.y + obstacle.height > box.y:
 				if obstacle.x == box.x + box.width:
-					game_over()
+					self.game_over = True
 
 		else:	
 			if box.y + 40 >= obstacle.apex_y:
 				if box.vel == 0 and box.x + box.width == obstacle.x: # if player collides with spikes
-					game_over()
+					platform.game_over = True
 				if box.x + box.width >= obstacle.apex_x and obstacle.apex_x > box.x: # if player lands on spikes
-					game_over()
-
+					self.game_over = True
 
 def createSpikes(no_of_spikes, last_obst):
 	""" 
@@ -221,16 +221,13 @@ def game_over():
 	platform.vel = 0
 	display_msg("GAME OVER!", "Press SPACE to play again")
 
-def pause_game(bool):
-	platform.game_paused = True
-	pygame.mixer.music.pause()
-	platform.vel = 0
+def pause_game(value):
+	platform.game_paused = value
+	if platform.game_paused:
+		pygame.mixer.music.pause()
+	else:
+		pygame.mixer.music.unpause()
 
-def resume_game():
-	platform.game_paused = False
-	pygame.mixer.music.unpause()
-	platform.vel = 10
-	
 
 box = Player()
 platform = Platform()
@@ -244,25 +241,27 @@ while run:
 		if event.type == pygame.QUIT:
 			run = False
 		if event.type == pygame.KEYDOWN:
-			if event.key == pygame.K_UP and (platform.obstacle_under_box or box.vel == 0):
-				if not platform.game_over and not platform.game_paused:
+			if event.key == pygame.K_UP:
+				if platform.obstacle_under_box or box.vel == 0:
 					box.vel = -10
 					box.jump_count = -10
 			if event.key == pygame.K_SPACE:
 				if platform.game_over:
 					reset()
 				else:
-					if not platform.game_paused:
-						pause_game()
+					if platform.game_paused:
+						pause_game(False)
 					else:
-						resume_game()
+						pause_game(True)
 
 	win.fill((0, 0, 0))
 	win.blit(bg_img, (i, 0)) # Moving first background image to produce the illusion of moving player
 	win.blit(bg_img, (800+i, 0)) # Moving second background image to produce the illusion of moving player 
 	win.blit(text.render("SCORE: " + str(platform.score), True, green), (700, 10))
+
 	box.display()
 	platform.display()
+
 	if platform.game_paused:
 		display_msg("GAME PAUSED!", "Press SPACE to resume")
 
@@ -271,18 +270,19 @@ while run:
 			i = 0
 		i -= platform.vel
 
-		if not platform.obstacle_under_box:
-			box.move()
+		box.move()
 
 		if platform.obstacles_onscreen[-1].x < 800:
 			createObstaclesAndSpikes()
 	platform.move_and_display_obstacles()
 
-
 	if platform.obstacle_under_box:
 		# if the player is no longer on an obstacle
 		if platform.obstacle_under_box.x + platform.obstacle_under_box.width < box.x:
 			platform.obstacle_under_box = None
+
+	if platform.game_over:
+		game_over()
 
 	pygame.display.flip()
 pygame.quit()
