@@ -19,12 +19,12 @@ class Player:
 		self.width = 40
 		self.height = 40
 		self.vel = 0
-		self.jump_count = -10
+		self.jump_count = 0
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
 
-	def move(self):	
+	def move(self):
 		self.jump_count += 1
 		self.y += self.vel
 
@@ -101,7 +101,7 @@ class Platform():
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
 
-	def move_obstacles(self):
+	def move_and_display_obstacles(self):
 		for obst in self.obstacles_onscreen[:]:
 			if obst.x + obst.width <= 0:
 				if type(obst) == Rectangle:
@@ -221,7 +221,7 @@ def game_over():
 	platform.vel = 0
 	display_msg("GAME OVER!", "Press SPACE to play again")
 
-def pause_game():
+def pause_game(bool):
 	platform.game_paused = True
 	pygame.mixer.music.pause()
 	platform.vel = 0
@@ -276,7 +276,7 @@ while run:
 
 		if platform.obstacles_onscreen[-1].x < 800:
 			createObstaclesAndSpikes()
-	platform.move_obstacles()
+	platform.move_and_display_obstacles()
 
 
 	if platform.obstacle_under_box:
