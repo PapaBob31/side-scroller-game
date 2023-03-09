@@ -1,4 +1,5 @@
 import pygame, copy, random, json
+from time import time
 pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.load("bg_music.ogg")
@@ -20,6 +21,9 @@ class Player:
 		self.height = 40
 		self.vel = 0 # Speed of the Player when jumping
 		self.jump_count = 0 # keeps track of how far the Player has jumped
+		self.exploding = pygame.image.load('exploding.png').convert_alpha()
+		self.time_died = None
+		self.dead = False
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
@@ -110,7 +114,7 @@ class Platform():
 	def move_and_display_obstacles(self):
 		for obst in self.obstacles_onscreen[:]:
 			obst.display()
-			if platform.game_paused:
+			if platform.game_paused or platform.game_over:
 				continue			
 			if type(obst) == Triangle:
 				obst.x -= platform.vel
@@ -139,13 +143,16 @@ class Platform():
 			if box.y + box.height > obstacle.y and obstacle.y + obstacle.height > box.y:
 				if obstacle.x == box.x + box.width:
 					self.game_over = True
+					box.time_died = time()
 
 		else:	
 			if box.y + 40 >= obstacle.apex_y:
 				if box.vel == 0 and box.x + box.width == obstacle.x: # if player collides with spikes
 					self.game_over = True
+					box.time_died = time()
 				if box.x + box.width >= obstacle.apex_x and obstacle.apex_x > box.x: # if player lands on spikes
 					self.game_over = True
+					box.time_died = time()
 
 	def load_and_Set_highscore(self, highscore=None):
 		""" Loads or Saves Game Highscore """
@@ -242,7 +249,10 @@ def game_over():
 		platform.new_highscore = True
 		platform.highscore = platform.score
 		platform.load_and_Set_highscore(platform.highscore)
+
 	display_msg("GAME OVER!", "Press SPACE to play again")
+	if time() - box.time_died < 0.2:
+		win.blit(box.exploding, (box.x, box.y))
 
 def pause_game(value):
 	platform.game_paused = value
@@ -288,7 +298,9 @@ while run:
 		game_over()
 	if platform.game_paused:
 		display_msg("GAME PAUSED!", "Press SPACE to resume")
-	box.display()
+
+	if not box.time_died:
+		box.display()
 	platform.display()
 
 	if not platform.game_over and not platform.game_paused:
