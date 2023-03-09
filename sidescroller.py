@@ -1,4 +1,4 @@
-import pygame, copy, random
+import pygame, copy, random, json
 pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.load("bg_music.ogg")
@@ -8,7 +8,7 @@ bg_img = pygame.image.load('bg_img.jpg').convert()
 text = pygame.font.SysFont("Helvetica", 18)
 
 red = (255, 0, 0)
-green = (0, 150, 0)
+green = (0, 100, 0)
 
 class Player:
 	""" Player Class """
@@ -99,15 +99,19 @@ class Platform():
 		self.obstacle_under_box = None
 		self.next_obstacle = None # Next obstacle to be appended to obstacles_onscreen
 		self.game_over = False
-		self.score = 0
 		self.game_paused = False
+		self.score = 0
+		self.highscore = 0
+		self.new_highscore = False
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
 
 	def move_and_display_obstacles(self):
 		for obst in self.obstacles_onscreen[:]:
-			obst.display()		
+			obst.display()
+			if platform.game_paused:
+				continue			
 			if type(obst) == Triangle:
 				obst.x -= platform.vel
 				obst.apex_x -= platform.vel
@@ -142,6 +146,20 @@ class Platform():
 					self.game_over = True
 				if box.x + box.width >= obstacle.apex_x and obstacle.apex_x > box.x: # if player lands on spikes
 					self.game_over = True
+
+	def load_and_Set_highscore(self, highscore=None):
+		""" Loads or Saves Game Highscore """
+		if highscore:
+			with open("highscore.json", "w") as highscore_file:
+				json.dump(highscore, highscore_file) # Updates high score file if there's a new highscore
+			return
+
+		try:
+			with open("highscore.json", "r") as highscore_file:
+				self.highscore  = json.load(highscore_file)		
+		except (FileNotFoundError, json.decoder.JSONDecodeError):
+			self.highscore = 0
+
 
 def createSpikes(no_of_spikes, last_obst):
 	""" Creates a number of spikes based on the value of no_of_spikes parameter """
@@ -205,18 +223,25 @@ def reset():
 	pygame.mixer.music.play(-1, 0, 0)
 	platform.__init__()
 	box.__init__()
+	platform.load_and_Set_highscore()
 
 def display_msg(text1, text2):
 	pygame.draw.rect(win, (255, 255, 255), (300, 50, 200, 100))
 	pygame.draw.rect(win, green, (300, 50, 200, 30))
-	win.blit(text.render(text1, False, red), (350, 55))
-	win.blit(text.render(text2, True, green), (310, 100))
+	win.blit(text.render(text1, True, red), (350, 55))
+	if platform.new_highscore:
+		win.blit(text.render("NEW HIGHSCORE: " + str(platform.highscore), True, green), (320, 90))
+	win.blit(text.render(text2, True, green), (310, 120))
 
 def game_over():
 	pygame.mixer.music.stop()
 	platform.game_over = True
 	box.vel = 0
 	platform.vel = 0
+	if platform.score > platform.highscore:
+		platform.new_highscore = True
+		platform.highscore = platform.score
+		platform.load_and_Set_highscore(platform.highscore)
 	display_msg("GAME OVER!", "Press SPACE to play again")
 
 def pause_game(value):
@@ -229,6 +254,7 @@ def pause_game(value):
 
 box = Player()
 platform = Platform()
+platform.load_and_Set_highscore()
 run = True
 i = 0 # X coordinate of first background image
 pygame.mixer.music.play(-1, 0, 0)
@@ -257,6 +283,7 @@ while run:
 	win.blit(bg_img, (i, 0)) # Background Image 1
 	win.blit(bg_img, (800+i, 0)) # Background Image 2
 	win.blit(text.render("SCORE: " + str(platform.score), True, green), (700, 10))
+	win.blit(text.render("HIGHSCORE: " + str(platform.highscore), True, green), (30, 10))
 	if platform.game_over:
 		game_over()
 	if platform.game_paused:
