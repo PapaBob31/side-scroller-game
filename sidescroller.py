@@ -3,7 +3,7 @@ from time import time
 pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.load("bg_music.ogg")
-pygame.display.set_caption("Run Box run!")
+pygame.display.set_caption("Jump Box Jump!")
 win = pygame.display.set_mode((800, 420))
 bg_img = pygame.image.load('bg_img.jpg').convert()
 text = pygame.font.SysFont("Helvetica", 18)
