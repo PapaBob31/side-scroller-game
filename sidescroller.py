@@ -7,9 +7,9 @@ pygame.display.set_caption("Run Box run!")
 win = pygame.display.set_mode((800, 420))
 bg_img = pygame.image.load('bg_img.jpg').convert()
 text = pygame.font.SysFont("Helvetica", 18)
-
 red = (255, 0, 0)
 green = (0, 100, 0)
+
 
 class Player:
 	""" Player Class """
@@ -106,7 +106,6 @@ class Platform():
 		self.game_paused = False
 		self.score = 0
 		self.highscore = 0
-		self.new_highscore = False
 
 	def display(self):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
@@ -114,21 +113,20 @@ class Platform():
 	def move_and_display_obstacles(self):
 		for obst in self.obstacles_onscreen[:]:
 			obst.display()
-			if platform.game_paused or platform.game_over:
-				continue			
-			if type(obst) == Triangle:
-				obst.x -= platform.vel
-				obst.apex_x -= platform.vel
-				obst.right_base_corner -= platform.vel
-			else:
-				obst.x -= platform.vel
+			if platform.vel > 0:
+				if type(obst) == Triangle:
+					obst.x -= platform.vel
+					obst.apex_x -= platform.vel
+					obst.right_base_corner -= platform.vel
+				else:
+					obst.x -= platform.vel
 
-			self.check_for_collisions(obst)
+				self.check_for_collisions(obst)
 
-			if obst.x + obst.width <= 0:
-				if type(obst) == Rectangle:
-					platform.score += 1
-				platform.obstacles_onscreen.remove(obst)
+				if obst.x + obst.width <= 0:
+					if type(obst) == Rectangle:
+						platform.score += 1
+					platform.obstacles_onscreen.remove(obst)
 
 	def check_for_collisions(self, obstacle):
 		""" Checks for collisions between an Obstacle or Spike and a Player """
@@ -143,16 +141,13 @@ class Platform():
 			if box.y + box.height > obstacle.y and obstacle.y + obstacle.height > box.y:
 				if obstacle.x == box.x + box.width:
 					self.game_over = True
-					box.time_died = time()
 
 		else:	
 			if box.y + 40 >= obstacle.apex_y:
 				if box.vel == 0 and box.x + box.width == obstacle.x: # if player collides with spikes
 					self.game_over = True
-					box.time_died = time()
 				if box.x + box.width >= obstacle.apex_x and obstacle.apex_x > box.x: # if player lands on spikes
 					self.game_over = True
-					box.time_died = time()
 
 	def load_and_Set_highscore(self, highscore=None):
 		""" Loads or Saves Game Highscore """
@@ -180,7 +175,7 @@ def createSpikes(no_of_spikes, last_obst):
 
 def create_next_obstacle():
 	""" 
-		Creates obstacles and spikes to be rendered. Creates the needed spacing between the 
+		Creates the next Obstacle to be added to obstacles list. Creates the needed spacing between the 
 		current last obstacle and the new one based on some conditions. Spikes fills these spacings
 	"""
 	obstacle = random.choice(platform.obstacles_list)
@@ -212,6 +207,7 @@ def create_next_obstacle():
 		create_next_obstacle()
 
 def createObstaclesAndSpikes():
+	""" Adds Created Obstacles and Spikes to the obstacles_onscreen list """
 	create_next_obstacle()
 	if platform.next_obstacle.is_floating:
 		index = platform.next_obstacle.width//20 # Number of spikes that were just added to platform.obstacles_onscreen
@@ -233,33 +229,32 @@ def reset():
 	platform.load_and_Set_highscore()
 
 def display_msg(text1, text2):
+	""" Displays messages about the state of the game """
 	pygame.draw.rect(win, (255, 255, 255), (300, 50, 200, 100))
 	pygame.draw.rect(win, green, (300, 50, 200, 30))
 	win.blit(text.render(text1, True, red), (350, 55))
-	if platform.new_highscore:
-		win.blit(text.render("NEW HIGHSCORE: " + str(platform.highscore), True, green), (320, 90))
+	if platform.score > platform.highscore:
+		win.blit(text.render("NEW HIGHSCORE: " + str(platform.score), True, green), (320, 90))
 	win.blit(text.render(text2, True, green), (310, 120))
 
 def game_over():
 	pygame.mixer.music.stop()
 	platform.game_over = True
-	box.vel = 0
 	platform.vel = 0
 	if platform.score > platform.highscore:
-		platform.new_highscore = True
-		platform.highscore = platform.score
-		platform.load_and_Set_highscore(platform.highscore)
-
+		platform.load_and_Set_highscore(platform.score)
 	display_msg("GAME OVER!", "Press SPACE to play again")
 	if time() - box.time_died < 0.2:
-		win.blit(box.exploding, (box.x, box.y))
+		win.blit(box.exploding, (box.x, box.y)) # Display exploding image of box for about 0.2 seconds
 
 def pause_game(value):
 	platform.game_paused = value
 	if platform.game_paused:
 		pygame.mixer.music.pause()
+		platform.vel = 0
 	else:
 		pygame.mixer.music.unpause()
+		platform.vel = 10
 
 
 box = Player()
@@ -294,14 +289,16 @@ while run:
 	win.blit(bg_img, (800+i, 0)) # Background Image 2
 	win.blit(text.render("SCORE: " + str(platform.score), True, green), (700, 10))
 	win.blit(text.render("HIGHSCORE: " + str(platform.highscore), True, green), (30, 10))
-	if platform.game_over:
-		game_over()
+
+	platform.display()
 	if platform.game_paused:
 		display_msg("GAME PAUSED!", "Press SPACE to resume")
-
-	if not box.time_died:
+	if platform.game_over:
+		if not box.time_died:
+			box.time_died = time()
+		game_over()
+	else:
 		box.display()
-	platform.display()
 
 	if not platform.game_over and not platform.game_paused:
 		if i == -800:
